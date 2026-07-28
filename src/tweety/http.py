@@ -263,9 +263,31 @@ class Request:
         if headers.get("authorization"):
             del headers["authorization"]
         try:
-            response = await self._session.request(method="GET", url="https://x.com/?mx=2", headers=headers)
+            # ?mx=2 may serve the new x-web bundle, whose HTML no longer references
+            # the ondemand.s chunk. Without it TransactionGenerator cannot read the
+            # animation key indices and every signed request fails. Walk a list of
+            # URLs and prefer the first response that still carries that reference.
+            _HOME_PAGE_URL_CANDIDATES = (
+                "https://x.com/?mx=2",
+                "https://x.com/i/flow/login",
+                "https://x.com/home",
+                "https://x.com/explore",
+            )
+            response = None
+            for _home_url in _HOME_PAGE_URL_CANDIDATES:
+                try:
+                    _resp = await self._session.request(method="GET", url=_home_url, headers=headers)
+                except Exception:
+                    continue
 
-            if response.status_code not in range(200, 300):
+                if _resp.status_code not in range(200, 300):
+                    continue
+
+                response = _resp
+                if b"ondemand.s" in _resp.content:
+                    break
+
+            if response is None:
                 response = await self._session.request(method="GET", url=self._builder.URL_HOME_PAGE, headers=headers)
 
             home_page = bs4.BeautifulSoup(response.content, 'lxml')
