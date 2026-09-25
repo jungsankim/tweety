@@ -29,7 +29,8 @@ def find_on_demand_file(text: str) -> str | None:
     if pointer_match is None:
         return None
     pointer = pointer_match.group(1)
-    file = re.search(rf'{pointer}\s*:\s*"(\w+)"', text)
+    # (?<!\d): don't let a longer chunk id that merely ends with the same digits match first
+    file = re.search(rf'(?<!\d){pointer}\s*:\s*"(\w+)"', text)
     return None if file is None else file.group(1)
 
 

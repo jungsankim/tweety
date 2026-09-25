@@ -267,6 +267,9 @@ class Request:
             # the ondemand.s chunk. Without it TransactionGenerator cannot read the
             # animation key indices and every signed request fails. Walk a list of
             # URLs and prefer the first response that still carries that reference.
+            # X is rolling out x-web gradually, so the same URL returns the legacy or
+            # the new HTML at random (about 2 in 12 legacy as of 2026-09-25). Keep
+            # cycling the candidates until a legacy page shows up.
             _HOME_PAGE_URL_CANDIDATES = (
                 "https://x.com/?mx=2",
                 "https://x.com/i/flow/login",
@@ -274,7 +277,7 @@ class Request:
                 "https://x.com/explore",
             )
             response = None
-            for _home_url in _HOME_PAGE_URL_CANDIDATES:
+            for _home_url in _HOME_PAGE_URL_CANDIDATES * 8:
                 try:
                     _resp = await self._session.request(method="GET", url=_home_url, headers=headers)
                 except Exception:
