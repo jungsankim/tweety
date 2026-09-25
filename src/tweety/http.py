@@ -279,7 +279,13 @@ class Request:
             response = None
             for _home_url in _HOME_PAGE_URL_CANDIDATES * 8:
                 try:
-                    _resp = await self._session.request(method="GET", url=_home_url, headers=headers)
+                    # Since 2026-09-26 logged-out requests only get the x-web HTML, while a
+                    # logged-in request still gets the legacy page. _init_local_api strips the
+                    # cookies before calling us, so attach the session cookies for this fetch only.
+                    _ck = self._cookie or getattr(getattr(self._client, "session", None), "cookies", None)
+                    if isinstance(_ck, str):
+                        _ck = dict(p.strip().split("=", 1) for p in _ck.split(";") if "=" in p)
+                    _resp = await self._session.request(method="GET", url=_home_url, headers=headers, cookies=_ck or None)
                 except Exception:
                     continue
 
